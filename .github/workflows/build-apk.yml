@@ -55,7 +55,7 @@ jobs:
           name: wallet-apk
           path: build/app/outputs/flutter-apk/app-release.apk
 
-      # طريقة 2: Release (رابط مباشر للـ APK بدون zip)
+      # طريق 2: Release (رابط مباشر للـ APK بدون zip)
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
