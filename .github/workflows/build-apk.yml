@@ -1,1 +1,65 @@
+name: Build APK
 
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # المشروع ما فيه مجلد android، فنولّده هنا مع حماية ملفاتنا من الاستبدال
+      - name: Generate android folder
+        run: |
+          cp lib/main.dart /tmp/main.dart
+          cp pubspec.yaml /tmp/pubspec.yaml
+          flutter create --platforms=android --project-name wallet_app --org com.example .
+          cp /tmp/main.dart lib/main.dart
+          cp /tmp/pubspec.yaml pubspec.yaml
+          rm -rf test
+
+      - name: Add camera permission
+        run: |
+          sed -i 's#<application#<uses-permission android:name="android.permission.CAMERA"/>\n    <application#' android/app/src/main/AndroidManifest.xml
+          grep -n "CAMERA" android/app/src/main/AndroidManifest.xml
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      # طريقة 1: Artifact (يتنزل كملف zip)
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wallet-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      # طريقة 2: Release (رابط مباشر للـ APK بدون zip)
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Build ${{ github.run_number }}
+          prerelease: true
+          files: build/app/outputs/flutter-apk/app-release.apk
